@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-todo-rolling
+  labels:
+    app: todo-app-rolling
+    tier: frontend-rolling
+spec:
+  selector:
+    matchLabels:
+      app: todo-app-rolling
+      tier: frontend-rolling
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1        # Maximum number of pods that can be created over desired replicas
+      maxUnavailable: 1  # Maximum number of pods that can be unavailable during update
+  template:
+    metadata:
+      labels:
+        app: todo-app-rolling
+        tier: frontend-rolling
+    spec:
+      containers:
+      - name: flask-todo-rolling
+        image: arr8154/todo-flask-app:latest
+        ports:
+        - containerPort: 5000
+        env:
+        - name: MONGO_HOST
+          value: mongodb
+        - name: MONGO_PORT
+          value: "27017"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flask-todo-rolling
+  labels:
+    app: todo-app-rolling
+    tier: frontend-rolling
+spec:
+  type: NodePort
+  ports:
+  - port: 5000
+    targetPort: 5000
+  selector:
+    app: todo-app-rolling
+    tier: frontend-rolling

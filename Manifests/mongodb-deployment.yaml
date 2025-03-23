@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+  labels:
+    app: todo-app
+    tier: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-app
+      tier: database
+  template:
+    metadata:
+      labels:
+        app: todo-app
+        tier: database
+    spec:
+      nodeSelector:
+        topology.kubernetes.io/zone: us-east-1c  # ✅ Forces scheduling on a node in us-east-1c
+      containers:
+      - name: mongodb
+        image: mongo:4.4
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: mongo-persistent-storage
+          mountPath: /data/db
+      volumes:
+      - name: mongo-persistent-storage
+        persistentVolumeClaim:
+          claimName: mongo-pvc  # ✅ Dynamically provisioned PVC
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb
+  labels:
+    app: todo-app
+    tier: database
+spec:
+  ports:
+  - port: 27017
+    targetPort: 27017
+  selector:
+    app: todo-app
+    tier: database
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongo-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: gp2  # ✅ Uses dynamic provisioning (EKS will create an EBS volume)
