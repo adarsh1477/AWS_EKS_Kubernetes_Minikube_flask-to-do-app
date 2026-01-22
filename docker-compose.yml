@@ -1,36 +1,38 @@
-version: '3'
 
 services:
+
   flask-app:
+
     build: .
-    container_name: todo-flask-app
-    ports:
-      - "5000:5000"
-    environment:
-      - FLASK_ENV=production
-      - MONGO_HOST=mongodb
-      - MONGO_PORT=27017
-    depends_on:
+    container_name: my_app
+    depends_on: 
       - mongodb
-    restart: unless-stopped
-    networks:
-      - todo-network
+    restart: "on-failure"
+    environment:
+      - MONGO_HOST=mongodb
+      - MONGO_PORT=27017  
+      - MONGO_USER=admin
+      - MONGO_PASS=admin123
+
+    ports: 
+      - "5000:5000"
+
+    
 
   mongodb:
+
     image: mongo:5.0
-    container_name: todo-mongodb
-    volumes:
-      - mongodb_data:/data/db
+    container_name: mongodb 
+    restart : "on-failure"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=admin123
     ports:
       - "27017:27017"
-    restart: unless-stopped
-    networks:
-      - todo-network
-
-networks:
-  todo-network:
-    driver: bridge
+    volumes:
+      - mongo-data:/data/db
+    
 
 volumes:
-  mongodb_data:
+  mongo-data:
     driver: local

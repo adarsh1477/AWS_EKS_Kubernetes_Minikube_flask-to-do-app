@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-app-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: flask-app
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: flask-app
+    spec:
+      restartPolicy: Always
+      containers:
+      - name: flask-app-container
+        image: 205930609338.dkr.ecr.us-east-1.amazonaws.com/flask-app:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5000
+        env:
+        - name: MONGO_HOST
+          value: mongodb-service
+        - name: MONGO_PORT
+          value: "27017"
+        - name: MONGO_USER
+          value: admin
+        - name: MONGO_PASS
+          value: admin123
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          timeoutSeconds: 3
+          failureThreshold: 3
