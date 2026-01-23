@@ -9,7 +9,7 @@ mongodb_port = int(os.environ.get('MONGO_PORT', '27017'))
 mongodb_user = os.environ.get('MONGO_USER')
 mongodb_pass = os.environ.get('MONGO_PASS')
 
-mongo_url = f"mongodb://{mongodb_user}:{mongodb_pass}@{mongodb_host}:{mongodb_port}/"
+mongo_url = f"mongodb://{mongodb_user}:{mongodb_pass}@{mongodb_host}:{mongodb_port}/camp2016?authSource=admin"
 
 
 client = MongoClient(mongo_url)    #Configure the connection to the database
@@ -20,6 +20,11 @@ app = Flask(__name__)
 title = "TODO with Flask"
 heading = "ToDo Reminder"
 #modify=ObjectId()
+
+@app.route("/health")
+def health():
+	return "ok", 200
+
 
 def redirect_url():
 	return request.args.get('next') or \
