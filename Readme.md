@@ -1,86 +1,215 @@
-# 📝 ToDo Reminder - Flask App on AWS EKS
+ToDo Reminder App — Flask + MongoDB on AWS EKS
 
-This is a simple Flask-based ToDo Reminder app deployed on **AWS Elastic Kubernetes Service (EKS)**.  
-It supports task creation, completion tracking, and priority assignment.
+A production-style deployment of a Flask To-Do application on AWS Elastic Kubernetes Service (EKS) with AWS ALB Ingress, persistent MongoDB storage via EBS, and secure IAM Roles for Service Accounts (IRSA).
 
----
+✅ Application Features
 
-## 🚀 Project Features
+Create, view, and complete reminder tasks
 
-- Built using Flask, HTML, and CSS
-- Deployed via Kubernetes on AWS EKS
-- Persistent storage with EBS volume for MongoDB
-- Health monitoring, rolling updates, and service exposure
-- Separate YAML files for deployments, services, and storage
+Persistent storage using MongoDB
 
----
+Responsive minimal UI built with HTML + CSS + JS
 
-## 📂 Project Structure
+Internal service communication inside K8s cluster
 
-AWS_EKS_Kubernetes_flask-to-do-app/ │ ├── app.py # Flask backend logic ├── Dockerfile # Docker image for the app ├── docker-compose.yml ├── requirements.txt │ ├── static/ # CSS and image assets ├── templates/ # HTML templates │ ├── flask-deployment.yaml ├── health-monitoring.yaml ├── mongodb-deployment.yaml ├── replication-controller.yaml ├── rolling-update.yaml ├── service.yaml │ └── Screenshots/ # 📸 Screenshots of running app
+🏗️ Infrastructure & Deployment Features
+Component	Choice
+Container Runtime	Docker
+Orchestration	Kubernetes on AWS EKS
+Ingress	AWS Load Balancer Controller (ALB)
+Storage	Amazon EBS via EBS CSI Driver
+Database	MongoDB Stateful container
+Access	IAM Roles for Service Accounts (IRSA)
+CI/CD	Manual (docker push → apply manifests)
+Exposure	Public Ingress (internet-facing ALB)
+📂 Repository Structure
+AWS_EKS_Kubernetes_flask-to-do-app/
+│
+├── app.py                           # Flask backend logic
+├── Dockerfile                       # Flask image build
+├── requirements.txt                 # Python dependencies
+│
+├── static/                          # CSS & assets
+├── templates/                       # HTML templates
+│
+├── docker-compose.yml               # Local testing (optional)
+│
+└── Manifests/                       # Kubernetes deployment files
+    ├── flask-deployment.yaml        # Flask Deployment
+    ├── flask-service.yaml           # Flask Service (ClusterIP)
+    ├── ingress.yaml                 # ALB Ingress
+    ├── mongodb-deployment.yaml      # MongoDB Deployment
+    ├── mongodb-service.yaml         # MongoDB Service (ClusterIP)
+    ├── mongopvc.yaml                # PersistentVolumeClaim
+    ├── ebs-iam-policy.json          # IAM policy for EBS CSI
+    ├── trust.json                   # OIDC trust relationship
 
-yaml
-Copy
-Edit
+🧱 Architecture Overview
 
----
+The final working architecture looks like this:
 
-## 📸 Deployed App (EKS)
+User → ALB Ingress → Flask Service (ClusterIP) → Flask Pods
+                                       │
+                                       ↓
+                              MongoDB Service → MongoDB Pod → EBS Volume
 
-**Live Application**(non functional cluster deleted)  
-🔗 [ToDo App on AWS](http://aaa64e290e604414b88a8a986b4a58d8-0c9f3e865c5777f3.elb.us-east-1.amazonaws.com/list)
+Key Implementation Details
 
----
+Flask Deployment
 
-## 🧰 Tools & Technologies
+Uses image stored in Amazon ECR
 
-- Python (Flask)
-- MongoDB
-- Docker
-- Kubernetes (YAML)
-- AWS EKS
-- Amazon EBS (via CSI driver)
+Scaled via replicas: 3
 
----
+MongoDB Deployment
 
-## 🛠️ Deployment Highlights
+Uses mongo:5.0
 
-```bash
-# Create EKS cluster
-eksctl create cluster \
-  --name flask-cluster \
-  --region us-east-1 \
-  --version 1.31 \
-  --nodegroup-name flask-node-group \
-  --node-type t2.small \
-  --nodes 2 \
-  --nodes-min 1 \
-  --nodes-max 3 \
-  --managed
+Connected via internal ClusterIP service
 
-# Scale node group to fix volume affinity issue
-eksctl scale nodegroup \
-  --cluster flask-cluster \
-  --name flask-node-group \
-  --nodes=4 \
-  --nodes-min=3 \
-  --nodes-max=6 \
-  --region us-east-1
+Persistent storage via EBS Volume
 
-# Enable IAM OIDC and EBS CSI driver
-eksctl utils associate-iam-oidc-provider --cluster flask-cluster --region us-east-1
-eksctl create addon --name aws-ebs-csi-driver --cluster flask-cluster --region us-east-1
+Persistent Storage
 
-# Deploy app and services
-kubectl apply -f mongodb-deployment.yaml
-kubectl apply -f flask-deployment.yaml
-kubectl apply -f health-monitoring.yaml
-kubectl apply -f replication-controller.yaml
-kubectl apply -f rolling-update.yaml
-kubectl apply -f service.yaml
-⚙️ Notes
-StorageClass changed from gp1 ➝ gp2 for dynamic provisioning on AWS
+PVC ReadWriteOnce
 
-MongoDB nodeSelector set to zone: us-east-1c to match EBS volume
+StorageClass: gp2
 
-Docker image: arr8154/flask-todo used during deployment
+Bound via EBS CSI driver
+
+Ingress (ALB)
+
+internet-facing
+
+target-type: ip
+
+Uses ingressClassName: alb
+
+📦 Containerization & Image Push Flow
+docker build -t flask-app .
+docker tag flask-app:latest <AWS_ACCOUNT>.dkr.ecr.<REGION>.amazonaws.com/flask-app:latest
+docker push <AWS_ECR_URL>/flask-app:latest
+
+
+Flask deployment then pulls image from ECR.
+
+🔐 IAM & Permissions
+1. ALB Controller IAM
+
+Created via:
+
+Downloading controller policy from AWS GitHub
+
+Creating IAM policy
+
+Creating ServiceAccount in kube-system
+
+Attaching IAM role via IRSA
+
+2. EBS CSI IAM
+
+Required because PVC creation hit:
+
+UnauthorizedOperation: ec2:DescribeAvailabilityZones
+
+
+Fixed via:
+
+Creating AmazonEKS_EBS_CSI_Driver_Policy
+
+Creating ebs-csi-controller-sa with IAM role via IRSA
+
+Updating EKS Add-On to use this IAM role
+
+🗄️ Data Persistence Behavior
+
+MongoDB writes → Stored on EBS → Survives:
+
+Pod restarts
+
+MongoDB container restarts
+
+Flask restarts
+
+Does not survive if:
+
+EBS volume deleted
+
+PVC deleted
+
+Cluster deleted
+
+🌐 Networking Setup
+Component	Type
+Flask Service	ClusterIP
+MongoDB Service	ClusterIP
+Ingress	ALB (public)
+
+Ingress annotations used:
+
+alb.ingress.kubernetes.io/scheme: internet-facing
+alb.ingress.kubernetes.io/target-type: ip
+
+🔍 Observability
+
+Tools enabled:
+
+kubectl logs
+
+kubectl describe
+
+metrics-server for HPA (optional)
+
+ALB health checks
+
+🧪 Validation Steps
+
+After apply:
+
+kubectl get pods -o wide
+kubectl get svc
+kubectl get ingress
+kubectl get pvc
+
+
+Validation criteria:
+
+All Flask pods Running
+
+MongoDB Running
+
+PVC Bound
+
+Ingress has ADDRESS
+
+Data persists after refresh/restart
+
+🏁 Current Status
+
+✔ Application reachable via ALB
+✔ MongoDB data persists using EBS
+✔ EKS cluster healthy
+✔ IRSA configured for ALB & EBS
+✔ ECR image pull successful
+
+Cluster later deleted to avoid AWS billing.
+
+🧰 Tech Used
+
+Python Flask
+
+MongoDB
+
+Docker
+
+AWS ECR
+
+AWS EKS
+
+AWS ALB Controller
+
+AWS EBS CSI Driver
+
+Kubernetes
+
+IRSA
