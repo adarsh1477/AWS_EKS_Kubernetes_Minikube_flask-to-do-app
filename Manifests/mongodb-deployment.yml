@@ -2,30 +2,45 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: mongodb
+
 spec:
   serviceName: "mongodb-service"
   replicas: 1
+
   selector:
     matchLabels:
       app: mongodb
+
   template:
     metadata:
       labels:
         app: mongodb
+
     spec:
       containers:
       - name: mongodb-container
         image: mongo:5.0
+
         ports:
         - containerPort: 27017
+
         env:
         - name: MONGO_INITDB_ROOT_USERNAME
-          value: mongo-user
+          valueFrom:
+            secretKeyRef:
+              name: mongo-secret
+              key: MONGO_USER
+
         - name: MONGO_INITDB_ROOT_PASSWORD
-          value: mongo-password
+          valueFrom:
+            secretKeyRef:
+              name: mongo-secret
+              key: MONGO_PASSWORD
+
         volumeMounts:
         - name: mongodb-storage
           mountPath: /data/db
+
   volumeClaimTemplates:
   - metadata:
       name: mongodb-storage

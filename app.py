@@ -3,11 +3,14 @@ from pymongo import MongoClient # Database connector
 from bson.objectid import ObjectId # For ObjectId to work
 from bson.errors import InvalidId # For catching InvalidId exception for ObjectId
 import os
+from dotenv import load_dotenv
+load_dotenv()
+
 
 mongodb_host = os.environ.get('MONGO_HOST', 'localhost')
 mongodb_port = int(os.environ.get('MONGO_PORT', '27017'))
 mongodb_user = os.environ.get('MONGO_USER')
-mongodb_pass = os.environ.get('MONGO_PASS')
+mongodb_pass = os.environ.get('MONGO_PASSWORD')
 
 mongo_url = f"mongodb://{mongodb_user}:{mongodb_pass}@{mongodb_host}:{mongodb_port}/camp2016?authSource=admin"
 
