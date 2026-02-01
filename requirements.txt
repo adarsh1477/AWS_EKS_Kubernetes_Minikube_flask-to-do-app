@@ -2,3 +2,4 @@ Flask==2.0.1
 Werkzeug==2.0.1
 pymongo==4.2.0
 gunicorn
+python-dotenv
