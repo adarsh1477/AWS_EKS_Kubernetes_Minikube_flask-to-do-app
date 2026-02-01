@@ -30,9 +30,9 @@ spec:
         - name: MONGO_PORT
           value: "27017"
         - name: MONGO_USER
-          value: admin
+          value: mongo-user
         - name: MONGO_PASS
-          value: admin123
+          value: mongo-password
         readinessProbe:
           httpGet:
             path: /health
