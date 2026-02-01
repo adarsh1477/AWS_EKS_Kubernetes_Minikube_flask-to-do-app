@@ -11,8 +11,8 @@ services:
     environment:
       - MONGO_HOST=mongodb
       - MONGO_PORT=27017  
-      - MONGO_USER=admin
-      - MONGO_PASS=admin123
+      - MONGO_USER=mongo-user
+      - MONGO_PASS=mongo-password
 
     ports: 
       - "5000:5000"
